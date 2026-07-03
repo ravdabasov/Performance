@@ -6,16 +6,20 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
@@ -23,11 +27,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenu
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -364,7 +366,6 @@ fun AddEditTaskScreen(
 
 private enum class PickerTarget { DATE, DEADLINE, CUSTOM_NOTIFICATION }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AssigneeSelector(
     users: List<com.example.smarttaskmanager.domain.model.AppUser>,
@@ -372,16 +373,32 @@ private fun AssigneeSelector(
     onUserSelected: (com.example.smarttaskmanager.domain.model.AppUser?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = selectedName ?: "Təyin edilməyib",
             onValueChange = {},
             readOnly = true,
             label = { Text("Cavabdeh") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor()
+            trailingIcon = {
+                Icon(
+                    if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                    contentDescription = null
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
         )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        // OutlinedTextField "readOnly" olsa da klik hadisələrini birbaşa vermir,
+        // ona görə üzərinə şəffaf, klikə həssas bir təbəqə qoyulur.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable { expanded = !expanded }
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.9f)
+        ) {
             DropdownMenuItem(
                 text = { Text("Təyin edilməyib") },
                 onClick = { onUserSelected(null); expanded = false }
