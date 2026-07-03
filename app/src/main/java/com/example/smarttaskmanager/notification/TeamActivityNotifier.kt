@@ -33,9 +33,18 @@ class TeamActivityNotifier @Inject constructor(
 
     private fun startTaskListener() {
         if (taskRegistration != null) return
+        var isInitialLoad = true
         taskRegistration = firestore.collection("tasks")
             .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
+
+                // Dinləyici İLK dəfə qoşulanda Firestore bütün mövcud (köhnə) sənədləri
+                // "ADDED" kimi göndərir - bunları bildiriş kimi göstərmək lazım deyil,
+                // əks halda hər tətbiq açılışında köhnə bildirişlər təkrarlanır.
+                if (isInitialLoad) {
+                    isInitialLoad = false
+                    return@addSnapshotListener
+                }
 
                 val myUid = firebaseAuth.currentUser?.uid
                 val myName = firebaseAuth.currentUser?.displayName?.ifBlank { null }
@@ -71,9 +80,16 @@ class TeamActivityNotifier @Inject constructor(
 
     private fun startChatListener() {
         if (chatRegistration != null) return
+        var isInitialLoad = true
         chatRegistration = firestore.collection("team_chat")
             .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
+
+                if (isInitialLoad) {
+                    isInitialLoad = false
+                    return@addSnapshotListener
+                }
+
                 val myUid = firebaseAuth.currentUser?.uid
 
                 snapshot.documentChanges.forEach { change ->
