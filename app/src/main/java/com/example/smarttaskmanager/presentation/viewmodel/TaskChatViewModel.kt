@@ -67,7 +67,11 @@ class TaskChatViewModel @Inject constructor(
 
     fun clearChat() {
         viewModelScope.launch {
-            commentRepository.clearComments(taskId)
+            try {
+                commentRepository.clearComments(taskId)
+            } catch (e: Exception) {
+                // Firestore icazə qaydası silməyə imkan verməyəndə tətbiq çökməsin.
+            }
         }
     }
 

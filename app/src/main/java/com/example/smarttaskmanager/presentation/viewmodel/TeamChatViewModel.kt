@@ -54,7 +54,11 @@ class TeamChatViewModel @Inject constructor(
 
     fun clearChat() {
         viewModelScope.launch {
-            chatRepository.clearAllMessages()
+            try {
+                chatRepository.clearAllMessages()
+            } catch (e: Exception) {
+                // Firestore icazə qaydası silməyə imkan verməyəndə tətbiq çökməsin.
+            }
         }
     }
 }
