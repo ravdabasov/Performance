@@ -45,6 +45,7 @@ data class AddEditTaskUiState(
     val assigneeUid: String? = null,
     val assigneeName: String? = null,
     val isEditMode: Boolean = false,
+    val currentUid: String? = null,
     val errorMessage: String? = null,
     val isSaved: Boolean = false
 ) {
@@ -61,6 +62,13 @@ data class AddEditTaskUiState(
             priority = priority,
             status = status
         ).eisenhowerGroup().titleAz
+
+    /**
+     * Tələb: task-ı YALNIZ yaradan redaktə edə bilər (deadline, prioritet, adı və s.
+     * dəyişdirə bilər). Yeni task yaradarkən (hələ isEditMode=false) hər kəs sərbəstdir.
+     */
+    val canEdit: Boolean
+        get() = !isEditMode || createdByUid == currentUid
 }
 
 /**
@@ -86,6 +94,7 @@ class AddEditTaskViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        _uiState.value = _uiState.value.copy(currentUid = firebaseAuth.currentUser?.uid)
         val taskId: Long = savedStateHandle.get<Long>("taskId") ?: 0L
         if (taskId != 0L) {
             viewModelScope.launch {
@@ -108,7 +117,8 @@ class AddEditTaskViewModel @Inject constructor(
                         completedByName = task.completedByName,
                         assigneeUid = task.assigneeUid,
                         assigneeName = task.assigneeName,
-                        isEditMode = true
+                        isEditMode = true,
+                        currentUid = firebaseAuth.currentUser?.uid
                     )
                 }
             }
@@ -134,6 +144,7 @@ class AddEditTaskViewModel @Inject constructor(
 
     fun save() {
         val state = _uiState.value
+        if (!state.canEdit) return // icazəsiz redaktəyə qarşı əlavə qoruma
         val category = state.computedCategory
         val task = Task(
             id = state.id,

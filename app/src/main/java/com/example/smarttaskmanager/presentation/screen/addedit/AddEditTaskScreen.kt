@@ -107,12 +107,31 @@ fun AddEditTaskScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (!state.canEdit) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Text(
+                            "Yalnız \"${state.createdByName}\" bu task-ı redaktə edə bilər. Siz yalnız baxa bilərsiniz.",
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
             item {
                 OutlinedTextField(
                     value = state.title,
                     onValueChange = viewModel::onTitleChanged,
                     label = { Text("Task adı *") },
                     isError = state.errorMessage != null,
+                    enabled = state.canEdit,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -122,6 +141,7 @@ fun AddEditTaskScreen(
                     onValueChange = viewModel::onDescriptionChanged,
                     label = { Text("Ətraflı qeyd (opsional)") },
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = state.canEdit,
                     minLines = 2
                 )
             }
@@ -130,6 +150,7 @@ fun AddEditTaskScreen(
                 DateTimeRow(
                     label = "Tarix / Saat",
                     dateTime = state.date,
+                    enabled = state.canEdit,
                     onDateClick = { showDatePickerFor = PickerTarget.DATE },
                     onTimeClick = { showTimePickerFor = PickerTarget.DATE }
                 )
@@ -138,6 +159,7 @@ fun AddEditTaskScreen(
                 DateTimeRow(
                     label = "Deadline",
                     dateTime = state.deadline,
+                    enabled = state.canEdit,
                     onDateClick = { showDatePickerFor = PickerTarget.DEADLINE },
                     onTimeClick = { showTimePickerFor = PickerTarget.DEADLINE }
                 )
@@ -156,6 +178,7 @@ fun AddEditTaskScreen(
                         onValueChange = { viewModel.onPriorityChanged(it.toInt()) },
                         valueRange = 1f..10f,
                         steps = 8,
+                        enabled = state.canEdit,
                         colors = androidx.compose.material3.SliderDefaults.colors(
                             thumbColor = priorityColor(state.priority),
                             activeTrackColor = priorityColor(state.priority)
@@ -179,6 +202,7 @@ fun AddEditTaskScreen(
                     value = state.tagsInput,
                     onValueChange = viewModel::onTagsChanged,
                     label = { Text("Tag-lar (vergüllə ayırın)") },
+                    enabled = state.canEdit,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -187,6 +211,7 @@ fun AddEditTaskScreen(
                 AssigneeSelector(
                     users = users,
                     selectedName = state.assigneeName,
+                    enabled = state.canEdit,
                     onUserSelected = viewModel::onAssigneeChanged
                 )
             }
@@ -210,6 +235,7 @@ fun AddEditTaskScreen(
                             FilterChip(
                                 selected = state.recurrenceType == recurrence,
                                 onClick = { viewModel.onRecurrenceChanged(recurrence) },
+                                enabled = state.canEdit,
                                 label = { Text(recurrence.displayNameAz) }
                             )
                         }
@@ -231,6 +257,7 @@ fun AddEditTaskScreen(
                             FilterChip(
                                 selected = timing in state.notificationTimings,
                                 onClick = { viewModel.onToggleNotificationTiming(timing) },
+                                enabled = state.canEdit,
                                 label = { Text(timing.displayNameAz) }
                             )
                         }
@@ -256,7 +283,8 @@ fun AddEditTaskScreen(
                             }
                             Switch(
                                 checked = state.customNotificationEnabled,
-                                onCheckedChange = { viewModel.onToggleCustomNotification() }
+                                onCheckedChange = { viewModel.onToggleCustomNotification() },
+                                enabled = state.canEdit
                             )
                         }
                         if (state.customNotificationEnabled) {
@@ -264,10 +292,10 @@ fun AddEditTaskScreen(
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                TextButton(onClick = { showDatePickerFor = PickerTarget.CUSTOM_NOTIFICATION }) {
+                                TextButton(onClick = { showDatePickerFor = PickerTarget.CUSTOM_NOTIFICATION }, enabled = state.canEdit) {
                                     Text(state.customNotificationTime.formatDate())
                                 }
-                                TextButton(onClick = { showTimePickerFor = PickerTarget.CUSTOM_NOTIFICATION }) {
+                                TextButton(onClick = { showTimePickerFor = PickerTarget.CUSTOM_NOTIFICATION }, enabled = state.canEdit) {
                                     Text(state.customNotificationTime.formatTime())
                                 }
                             }
@@ -282,9 +310,11 @@ fun AddEditTaskScreen(
                 }
             }
 
-            item {
-                Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (state.isEditMode) "Yadda saxla" else "Task yarat")
+            if (state.canEdit) {
+                item {
+                    Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (state.isEditMode) "Yadda saxla" else "Task yarat")
+                    }
                 }
             }
         }
@@ -369,6 +399,7 @@ private enum class PickerTarget { DATE, DEADLINE, CUSTOM_NOTIFICATION }
 private fun AssigneeSelector(
     users: List<com.example.smarttaskmanager.domain.model.AppUser>,
     selectedName: String?,
+    enabled: Boolean = true,
     onUserSelected: (com.example.smarttaskmanager.domain.model.AppUser?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -377,6 +408,7 @@ private fun AssigneeSelector(
             value = selectedName ?: "Təyin edilməyib",
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
             label = { Text("Cavabdeh") },
             trailingIcon = {
                 Icon(
@@ -388,11 +420,13 @@ private fun AssigneeSelector(
         )
         // OutlinedTextField "readOnly" olsa da klik hadisələrini birbaşa vermir,
         // ona görə üzərinə şəffaf, klikə həssas bir təbəqə qoyulur.
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable { expanded = !expanded }
-        )
+        if (enabled) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable { expanded = !expanded }
+            )
+        }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
@@ -416,6 +450,7 @@ private fun AssigneeSelector(
 private fun DateTimeRow(
     label: String,
     dateTime: LocalDateTime,
+    enabled: Boolean = true,
     onDateClick: () -> Unit,
     onTimeClick: () -> Unit
 ) {
@@ -426,8 +461,8 @@ private fun DateTimeRow(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                TextButton(onClick = onDateClick) { Text(dateTime.formatDate()) }
-                TextButton(onClick = onTimeClick) { Text(dateTime.formatTime()) }
+                TextButton(onClick = onDateClick, enabled = enabled) { Text(dateTime.formatDate()) }
+                TextButton(onClick = onTimeClick, enabled = enabled) { Text(dateTime.formatTime()) }
             }
         }
     }
