@@ -27,8 +27,8 @@ data class GroupStat(val group: TaskEisenhowerGroup, val total: Int, val done: I
 data class UserStat(val name: String, val completedCount: Int)
 
 data class StatisticsUiState(
-    val startDate: LocalDate = LocalDate.now().minusDays(30),
-    val endDate: LocalDate = LocalDate.now(),
+    val startDate: LocalDate = LocalDate.now().withDayOfMonth(1),
+    val endDate: LocalDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()),
     val totalCount: Int = 0,
     val completedCount: Int = 0,
     val activeCount: Int = 0,
@@ -41,15 +41,17 @@ data class StatisticsUiState(
 /**
  * Tələb: Statistika bölməsi - tarix aralığı seçilir, seçilən aralıqda deadline-ı olan
  * tasklar üzərindən ümumi/tamamlanan/aktiv say və hər Eisenhower qrupu üzrə icra faizi
- * hesablanır.
+ * hesablanır. Default olaraq CARİ AYIN 1-ci günündən son gününə qədər olan aralıq göstərilir,
+ * istifadəçi dəyişdirsə seçimi ekranda qaldığı müddətcə (state-də) saxlanılır.
  */
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
     private val repository: TaskRepository
 ) : ViewModel() {
 
-    private val startDate = MutableStateFlow(LocalDate.now().minusDays(30))
-    private val endDate = MutableStateFlow(LocalDate.now())
+    private val today = LocalDate.now()
+    private val startDate = MutableStateFlow(today.withDayOfMonth(1))
+    private val endDate = MutableStateFlow(today.withDayOfMonth(today.lengthOfMonth()))
 
     val uiState: StateFlow<StatisticsUiState> = combine(startDate, endDate) { s, e -> s to e }
         .flatMapLatest { (s, e) ->
